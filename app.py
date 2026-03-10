@@ -8,10 +8,6 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.backends import default_backend
 from flask_cors import CORS # Cài: pip install flask-cors
 
-app = Flask(__name__)
-CORS(app) # Dòng này cho phép mọi tên miền (như Netlify) gọi đến Backend
-app = Flask(__name__)
-CORS(app) # BẬT CORS ĐỂ KẾT NỐI VỚI INDEX.HTML
 
 # --- Giữ nguyên hàm tạo khóa RSA của bạn ---
 def get_or_create_rsa_keys(password: str):
@@ -91,7 +87,11 @@ def api_encrypt():
             "download_url": f"http://127.0.0.1:5000/download/{os.path.basename(enc_path)}"
         })
     return jsonify({"status": "error", "message": "Không có file"}), 400
-
+if __name__ == '__main__':
+    # Khi deploy, server sẽ cấp một cổng (PORT) ngẫu nhiên
+    port = int(os.environ.get("PORT", 5000))
+    # Host '0.0.0.0' để server có thể nhận kết nối từ bên ngoài (Netlify)
+    app.run(host='0.0.0.0', port=port)
 @app.route('/download/<filename>')
 def download_file(filename):
     return send_file(os.path.join("uploads", filename), as_attachment=True)
