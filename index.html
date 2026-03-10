@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IT3E_KHSV2526_031 | Hệ Thống Mã Hóa</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* ==================== CSS ==================== */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        
+        body { 
+            background-color: #050505; 
+            color: #333; 
+            display: flex; justify-content: center; align-items: center; 
+            min-height: 100vh;
+            overflow-y: auto; 
+            padding: 40px 20px;
+        }
+        
+        /* FIX LỖI KHÔNG BẤM ĐƯỢC: pointer-events: none */
+        #matrixCanvas { 
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+            z-index: 0; opacity: 0.8; pointer-events: none; 
+        }
+
+        /* KHUNG CHUYỂN TRANG */
+        .view-section { 
+            display: none; width: 100%; max-width: 850px; 
+            z-index: 10; position: relative; 
+            animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+            margin: auto; 
+        }
+        .view-section.active { display: block; }
+        .hidden { display: none !important; }
+        
+        @keyframes fadeIn { 
+            from { opacity: 0; transform: translateY(15px) scale(0.98); } 
+            to { opacity: 1; transform: translateY(0) scale(1); } 
+        }
+        
+        /* THIẾT KẾ CARD */
+        .card { 
+            background: rgba(255, 255, 255, 0.97); 
+            backdrop-filter: blur(12px); 
+            border: 1px solid rgba(255, 255, 255, 0.5); 
+            padding: 40px; border-radius: 24px; 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2); 
+            text-align: center;
+        }
+        
+        h1, h2, h3 { color: #111; font-weight: 600; letter-spacing: -0.5px; }
+        p { color: #555; line-height: 1.6; margin-bottom: 20px; }
+
+        /* BANNER CHUYÊN NGHIỆP */
+        .hero-banner { 
+            background: linear-gradient(135deg, #1a237e, #3498db 100%);
+            color: white; padding: 40px; border-radius: 12px; margin-bottom: 20px; 
+            box-shadow: 0 10px 20px rgba(42, 82, 152, 0.2);
+        }
+        .hero-banner h1 { color: white; font-size: 28px; margin-bottom: 8px; }
+        .hero-banner p { color: #e0eaf5; font-size: 15px; margin: 0; font-weight: 400; }
+        
+        /* FORM & INPUTS */
+        .form-group { margin-bottom: 25px; text-align: left; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px; color: #444; }
+        .form-input { 
+            width: 100%; padding: 14px 16px; background: #f8fafc; 
+            border: 1.5px solid #e2e8f0; border-radius: 12px; 
+            font-size: 15px; color: #1e293b; transition: all 0.2s ease; 
+        }
+        .form-input:focus { border-color: #3b82f6; background: #fff; outline: none; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
+        .form-input[readonly] { background: #f1f5f9; color: #64748b; cursor: copy; border-style: dashed; }
+        
+        /* NÚT BẤM */
+        .btn { 
+            padding: 14px 28px; border: none; border-radius: 12px; cursor: pointer; 
+            font-weight: 600; font-size: 15px; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
+            width: 100%; display: inline-flex; justify-content: center; align-items: center; gap: 8px;
+        }
+        .btn-primary { background: #2563eb; color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25); }
+        .btn-primary:hover { background: #1d4ed8; transform: translateY(-2px); box-shadow: 0 8px 16px rgba(37, 99, 235, 0.3); }
+        .btn-primary:active { transform: translateY(0); }
+        
+        .btn-danger { background: #ef4444; color: white; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25); }
+        .btn-danger:hover { background: #dc2626; transform: translateY(-2px); box-shadow: 0 8px 16px rgba(239, 68, 68, 0.3); }
+        
+        .btn-outline { background: transparent; border: 2px solid #e2e8f0; color: #475569; width: auto; font-size: 14px; padding: 10px 20px; }
+        .btn-outline:hover { background: #f8fafc; border-color: #cbd5e1; color: #0f172a; }
+
+        /* DASHBOARD - THÔNG KÊ & LOG */
+        .dashboard-header { 
+            background: #fff; padding: 25px; border-radius: 16px; margin-bottom: 25px; 
+            text-align: left; border: 1px solid #f1f5f9; border-left: 6px solid #2563eb; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        }
+        
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; }
+        .stat-box { background: #f8fafc; padding: 20px; border-radius: 16px; border: 1px solid #e2e8f0; text-align: left; }
+        .stat-value { font-size: 32px; font-weight: 700; color: #2563eb; margin-top: 10px; }
+        
+        .action-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; }
+        .action-card { 
+            background: #fff; padding: 30px 20px; border-radius: 16px; text-align: center; cursor: pointer; 
+            border: 2px solid #f1f5f9; transition: all 0.2s ease; 
+        }
+        .action-card:hover { border-color: #3b82f6; transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.06); }
+        
+        /* KHU VỰC KÉO THẢ (Drag & Drop) */
+        .drop-zone { 
+            border: 2px dashed #cbd5e1; border-radius: 16px; padding: 50px 20px; text-align: center; 
+            background: #f8fafc; cursor: pointer; transition: 0.2s; margin-bottom: 25px; 
+        }
+        .drop-zone:hover, .drop-zone.dragover { background: #eff6ff; border-color: #3b82f6; }
+        .drop-zone p { margin: 0; color: #64748b; font-weight: 500; }
+        .file-icon { font-size: 40px; margin-bottom: 15px; display: block; }
+        
+        /* BẢNG LỊCH SỬ LOG */
+        .audit-section { text-align: left; background: #fff; padding: 25px; border-radius: 16px; border: 1px solid #f1f5f9; }
+        .audit-table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 15px; }
+        .audit-table th, .audit-table td { border-bottom: 1px solid #f1f5f9; padding: 14px 10px; }
+        .audit-table th { color: #64748b; font-weight: 600; text-transform: uppercase; font-size: 12px; }
+        
+        /* HIỆU ỨNG LOADING & THANH TIẾN TRÌNH */
+        .loader { border: 4px solid #f1f5f9; border-top: 4px solid #2563eb; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .progress-bar { width: 100%; height: 10px; background: #e2e8f0; border-radius: 5px; margin: 20px 0; overflow: hidden; }
+        .progress-fill { height: 100%; background: #10b981; width: 0%; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        
+        .result-box { margin-top: 25px; padding: 25px; background: #ecfdf5; border-radius: 12px; border: 1px solid #a7f3d0; text-align: left; }
+    </style>
+</head>
+<body>
+
+    <canvas id="matrixCanvas"></canvas>
+
+    <section id="landing-page" class="view-section active">
+        <div class="card" style="position: relative; z-index: 10; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(5px);">
+            <div class="hero-banner">
+                <h1>🔒 Nền Tảng Bảo Mật Dữ Liệu</h1>
+                <p>Mã hóa đa chữ ký (Multi-Signature)</p>
+            </div>
+            <p>Dự án quản lý file an toàn bằng cơ chế đồng thuận nhóm.</p>
+            <button class="btn btn-primary" onclick="switchView('register-page')">🚀 Bắt Đầu Khởi Tạo Workspace</button>
+        </div>
+    </section>
+
+    <section id="register-page" class="view-section">
+        <div class="card">
+            <div style="text-align: left;"><button class="btn btn-outline" style="margin-bottom: 25px;" onclick="switchView('landing-page')">⬅ Quay lại</button></div>
+            <h2 style="margin-bottom: 30px; text-align: left;">Thiết Lập Nhóm Nghiên Cứu</h2>
+            
+            <div class="form-group">
+                <label>Tên Trưởng Nhóm (Admin)</label>
+                <input type="text" id="leaderName" class="form-input" placeholder="Nhập tên của bạn">
+            </div>
+            <div class="form-group">
+                <label>Tên Nhóm Làm Việc</label>
+                <input type="text" id="groupName" class="form-input" placeholder="Nhập tên nhóm của bạn">
+            </div>
+            <div class="form-group">
+                <label>Số lượng thành viên tối đa (2 - 200)</label>
+                <input type="number" id="maxMembers" class="form-input" min="2" max="200" placeholder="Nhập số lượng thành viên...">
+            </div>
+            
+            <button class="btn btn-primary" onclick="createGroup()" style="margin-top: 15px;">Tạo Nhóm & Sinh Link Mời</button>
+        </div>
+    </section>
+
+    <section id="dashboard-page" class="view-section">
+        <div class="card" style="padding: 35px;">
+            <div class="dashboard-header">
+                <h2 style="font-size: 22px;">Xin chào, <strong style="color: #2563eb;"><span id="displayLeader"></span></strong>!</h2>
+                <div style="margin-top: 15px;">
+                    <label style="font-size: 13px; color: #64748b; font-weight: 600;">LINK MỜI THÀNH VIÊN VÀO NHÓM:</label>
+                    <div style="display: flex; gap: 10px; margin-top: 5px;">
+                        <input type="text" id="inviteLink" class="form-input" readonly>
+                        <button class="btn btn-primary" id="copyBtn" onclick="copyLink()" style="width: auto;">Copy</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <p style="margin: 0; font-size: 13px; color: #64748b; font-weight: 600;">SỐ FILE ĐÃ MÃ HÓA</p>
+                    <div class="stat-value" id="statEncCount">0</div>
+                </div>
+                <div class="stat-box">
+                    <p style="margin: 0; font-size: 13px; color: #64748b; font-weight: 600;">SỐ FILE ĐÃ GIẢI MÃ</p>
+                    <div class="stat-value" id="statDecCount" style="color: #10b981;">0</div>
+                </div>
+            </div>
+
+            <div class="action-cards">
+                <div class="action-card" onclick="switchView('encrypt-page')">
+                    <h3 style="color: #2563eb; margin-bottom: 8px;">🔒 Mã Hóa File</h3>
+                    <p style="font-size: 13px; margin: 0; color: #64748b;">Xử lý file tải lên và cấp Key</p>
+                </div>
+                <div class="action-card" onclick="startDecryptionFlow()">
+                    <h3 style="color: #ef4444; margin-bottom: 8px;">🔓 Giải Mã File</h3>
+                    <p style="font-size: 13px; margin: 0; color: #64748b;">Yêu cầu xác thực Đa chữ ký</p>
+                </div>
+            </div>
+
+            <div class="audit-section">
+                <h3 style="font-size: 16px; margin-bottom: 10px;">Lịch sử hoạt động (Audit Log)</h3>
+                <div style="max-height: 200px; overflow-y: auto;">
+                    <table class="audit-table">
+                        <thead><tr><th>Thời gian</th><th>Tên File</th><th>Thao tác</th></tr></thead>
+                        <tbody id="logBody">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="encrypt-page" class="view-section">
+        <div class="card">
+            <div style="text-align: left;"><button class="btn btn-outline" onclick="switchView('dashboard-page')">⬅ Trở về</button></div>
+            <h2 style="margin: 25px 0;">Mã Hóa Dữ Liệu</h2>
+            
+            <div class="drop-zone" id="encDropZone">
+                <span class="file-icon">📁</span>
+                <p>Kéo thả file vào đây hoặc <strong>Nhấn để chọn</strong></p>
+                <input type="file" id="encFileInput" style="display: none;">
+                <p id="encFileName" style="color: #2563eb; margin-top: 15px; font-weight: 600;"></p>
+            </div>
+            
+            <button class="btn btn-primary" onclick="processEncryption()">Thực thi thuật toán AES-256</button>
+            
+            <div id="loadingEnc" class="hidden"><div class="loader"></div><p style="color: #64748b;">Đang mã hóa dữ liệu. Vui lòng đợi...</p></div>
+            
+            <div id="encryptResult" class="hidden result-box">
+                <h3 style="color: #10b981; margin-bottom: 8px;">✅ Xử lý thành công!</h3>
+                <p style="font-size: 14px; margin-bottom: 10px;">Mật khẩu truy cập (Hãy lưu lại và gửi cho nhóm):</p>
+                <div style="background: #fff; padding: 15px; border-radius: 8px; border: 1px dashed #10b981;">
+                    <strong style="color: #ef4444; font-size: 20px; font-family: monospace;">V-DATA-2026-IT3E-XYZ</strong>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="decrypt-page" class="view-section">
+        <div class="card">
+            <div style="text-align: left;"><button class="btn btn-outline" onclick="switchView('dashboard-page')">⬅ Trở về</button></div>
+            <h2 style="margin: 25px 0;">Hệ Thống Xác Thực Đồng Thuận</h2>
+            
+            <div style="background: #f8fafc; padding: 25px; border-radius: 16px; text-align: left; border: 1px solid #e2e8f0;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <span style="font-weight: 600; color: #475569;">Tiến độ xác thực:</span>
+                    <strong style="color: #2563eb;"><span id="approvalCount">0</span> / <span id="requiredApprovals">0</span></strong>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+                <button class="btn btn-outline" style="width: 100%; border-style: dashed;" id="btnSimulate" onclick="simulateApproval()">+ Giả lập 1 thành viên nhập đúng Key</button>
+            </div>
+
+            <div id="decryptWorkspace" class="hidden" style="margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 30px;">
+                <h3 style="color: #10b981; margin-bottom: 20px;">✅ Đủ điều kiện! Kích hoạt giải mã</h3>
+                <div class="drop-zone" id="decDropZone" style="padding: 30px 20px;">
+                    <span class="file-icon">🔒</span>
+                    <p>Kéo thả file <strong>.enc</strong> vào đây để mở khóa</p>
+                    <input type="file" id="decFileInput" style="display: none;">
+                </div>
+                <button class="btn btn-danger" onclick="processDecryption()">Tiến hành Giải Mã</button>
+                <div id="loadingDec" class="hidden"><div class="loader"></div><p style="color: #64748b;">Đang đối chiếu khóa...</p></div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // Lõi chuyển trang
+        function switchView(viewId) {
+            document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+        }
+
+        // Biến toàn cục
+        let requiredApprovals = 0, currentApprovals = 0;
+        let statEnc = 0, statDec = 0;
+
+        // Xử lý Lịch sử Log
+        function addLog(fileName, action) {
+            const time = new Date().toLocaleTimeString('vi-VN');
+            const color = action.includes("Mã") ? "#2563eb" : "#10b981";
+            const row = `<tr>
+                <td style="color: #64748b;">${time}</td>
+                <td style="font-weight: 500;">${fileName}</td>
+                <td><strong style="color: ${color}; background: #f8fafc; padding: 4px 8px; border-radius: 6px; font-size: 12px;">${action}</strong></td>
+            </tr>`;
+            document.getElementById('logBody').insertAdjacentHTML('afterbegin', row);
+        }
+
+        // Tạo nhóm
+       // Tạo nhóm và sinh Link THẬT
+        function createGroup() {
+            const leaderName = document.getElementById('leaderName').value;
+            const groupName = document.getElementById('groupName').value;
+            const maxMembers = parseInt(document.getElementById('maxMembers').value);
+            
+            if (!leaderName || !groupName || isNaN(maxMembers) || maxMembers < 2) {
+                alert("Vui lòng điền đầy đủ thông tin hợp lệ (Thành viên từ 2-200)!");
+                return;
+            }
+
+            requiredApprovals = Math.ceil(maxMembers / 2) + 1; 
+            if (requiredApprovals > maxMembers) requiredApprovals = maxMembers;
+
+            document.getElementById('displayLeader').innerText = leaderName;
+            
+            // 1. Tạo mã nhóm ngẫu nhiên (VD: A8X9KH)
+            const randomCode = Math.random().toString(36).substr(2, 6).toUpperCase();
+            
+            // 2. Thuật toán tạo Link THẬT chạy trên máy của bạn
+            // Lấy đường dẫn hiện tại (VD: http://127.0.0.1:5500) và bỏ phần "index.html" đi
+            let currentPath = window.location.href.split('?')[0]; 
+            currentPath = currentPath.substring(0, currentPath.lastIndexOf("/"));
+            
+            // Ghép thành link hoàn chỉnh trỏ tới member.html, mang theo tham số "?code="
+            const realLink = `${currentPath}/member.html?code=${randomCode}`;
+
+            document.getElementById('inviteLink').value = realLink;
+
+            switchView('dashboard-page');
+            addLog("Hệ thống", "Khởi tạo Nhóm thành công");
+        }
+
+       // Hàm Copy Link bao xài mọi lúc mọi nơi
+        function copyLink() {
+            const linkInput = document.getElementById('inviteLink');
+            const copyBtn = document.getElementById('copyBtn');
+            
+            // Bôi đen toàn bộ đoạn link trong ô
+            linkInput.select();
+            linkInput.setSelectionRange(0, 99999); // Hỗ trợ cho cả điện thoại di động
+
+            try {
+                // Dùng lệnh copy truyền thống của trình duyệt
+                document.execCommand('copy');
+                
+                // Đổi nút bấm báo hiệu thành công
+                copyBtn.innerText = "Đã Copy!"; 
+                copyBtn.style.background = "#10b981";
+                
+                // Trả lại nút cũ sau 2 giây
+                setTimeout(() => { 
+                    copyBtn.innerText = "Copy"; 
+                    copyBtn.style.background = ""; 
+                }, 2000);
+            } catch (err) {
+                alert("Lỗi: Trình duyệt của bạn không hỗ trợ, vui lòng copy thủ công!");
+            }
+        }
+
+        // Cài đặt kéo thả File
+        function setupDropZone(zoneId, inputId, displayId) {
+            const zone = document.getElementById(zoneId);
+            const input = document.getElementById(inputId);
+            
+            zone.addEventListener('click', () => input.click());
+            zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover'); });
+            zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault(); zone.classList.remove('dragover');
+                if(e.dataTransfer.files.length) {
+                    input.files = e.dataTransfer.files;
+                    if(displayId) document.getElementById(displayId).innerText = "File đã chọn: " + input.files[0].name;
+                }
+            });
+            input.addEventListener('change', () => { 
+                if(displayId && input.files[0]) document.getElementById(displayId).innerText = "File đã chọn: " + input.files[0].name; 
+            });
+        }
+        
+        setupDropZone('encDropZone', 'encFileInput', 'encFileName');
+        setupDropZone('decDropZone', 'decFileInput', null);
+
+        // Luồng Mã Hóa
+        // XỬ LÝ MÃ HÓA THỰC TẾ (KẾT NỐI VỚI PYTHON)
+        async function processEncryption() {
+            const fileInput = document.getElementById('encFileInput');
+            const file = fileInput.files[0];
+            
+            if(!file) { alert("Vui lòng chọn file trước khi mã hóa!"); return; }
+            
+            document.getElementById('loadingEnc').classList.remove('hidden');
+            document.getElementById('encryptResult').classList.add('hidden');
+            
+            // 1. Chuẩn bị bưu kiện (File + Thông số nhóm n, k)
+            const formData = new FormData();
+            formData.append("file", file);
+            
+            // Lấy maxMembers và requiredApprovals đã tính lúc nãy để truyền cho Python chia mảnh
+            const maxMembers = document.getElementById('maxMembers').value || 5;
+            formData.append("n", maxMembers);
+            formData.append("k", requiredApprovals || 3);
+
+            try {
+                // 2. Gửi sang Python (Cổng 5000 của Flask)
+                const response = await fetch("http://127.0.0.1:5000/api/encrypt", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.status === "success") {
+                    // 3. Ẩn loading
+                    document.getElementById('loadingEnc').classList.add('hidden');
+                    
+                    // 4. In các mảnh Key ra màn hình
+                    const resultBox = document.getElementById('encryptResult');
+                    resultBox.innerHTML = `
+                        <h3 style="color: #10b981; margin-bottom: 8px;">✅ Xử lý thành công!</h3>
+                        <p style="font-size: 14px; margin-bottom: 10px;">Hệ thống đã chia bí mật thành <strong>${maxMembers} mảnh</strong>. Hãy gửi cho từng thành viên:</p>
+                        <div style="background: #fff; padding: 15px; border-radius: 8px; border: 1px dashed #10b981; max-height: 150px; overflow-y: auto;">
+                            <ul style="text-align: left; font-size: 13px; font-family: monospace; color: #ef4444; word-break: break-all;">
+                                ${result.shares.map((share, index) => `<li style="margin-bottom: 5px;"><strong>Mảnh ${index + 1}:</strong> ${share}</li>`).join('')}
+                            </ul>
+                        </div>
+                        <a href="${result.download_url}" target="_blank" class="btn btn-outline" style="margin-top: 15px; width: 100%; border-color: #10b981; color: #10b981;">📥 Tải File Đã Mã Hóa (.enc)</a>
+                    `;
+                    resultBox.classList.remove('hidden');
+                    
+                    // 5. Cập nhật Dashboard
+                    statEnc++; 
+                    document.getElementById('statEncCount').innerText = statEnc;
+                    addLog(file.name, "Mã hóa AES + Shamir Secret");
+                } else {
+                    alert("Lỗi từ Server Python!");
+                    document.getElementById('loadingEnc').classList.add('hidden');
+                }
+            } catch (error) {
+                console.error(error);
+                alert("Mất kết nối! Hãy chắc chắn bạn đã chạy file Python (app.py) trên Terminal.");
+                document.getElementById('loadingEnc').classList.add('hidden');
+            }
+        }
+
+        // Luồng Giải Mã
+        function startDecryptionFlow() {
+            currentApprovals = 0; 
+            document.getElementById('requiredApprovals').innerText = requiredApprovals;
+            document.getElementById('approvalCount').innerText = currentApprovals;
+            document.getElementById('progressFill').style.width = '0%'; 
+            
+            document.getElementById('decryptWorkspace').classList.add('hidden');
+            document.getElementById('btnSimulate').classList.remove('hidden');
+            
+            switchView('decrypt-page');
+        }
+
+        function simulateApproval() {
+            if (currentApprovals < requiredApprovals) {
+                currentApprovals++;
+                document.getElementById('approvalCount').innerText = currentApprovals;
+                document.getElementById('progressFill').style.width = (currentApprovals / requiredApprovals * 100) + '%';
+                
+                if (currentApprovals === requiredApprovals) {
+                    document.getElementById('decryptWorkspace').classList.remove('hidden');
+                    document.getElementById('btnSimulate').classList.add('hidden'); 
+                }
+            }
+        }
+
+        function processDecryption() {
+            document.getElementById('loadingDec').classList.remove('hidden');
+            
+            setTimeout(() => {
+                document.getElementById('loadingDec').classList.add('hidden');
+                alert("Giải mã thành công! Mở khóa dữ liệu.");
+                
+                statDec++; 
+                document.getElementById('statDecCount').innerText = statDec;
+                addLog("File_Du_Lieu.enc", "Giải mã cấp cao");
+                
+                switchView('dashboard-page');
+            }, 1500);
+        }
+
+        // Hiệu ứng Ma trận nhẹ nhàng (Chạy ngầm không block UI)
+        window.onload = () => {
+            const canvas = document.getElementById('matrixCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+            window.addEventListener('resize', resizeCanvas); 
+            resizeCanvas();
+            
+            const chars = '01ABCDEFGHIJKLMNOPQRSTUVWXYZ@#$%^&*';
+            const fontSize = 16;
+            const columns = canvas.width / fontSize;
+            const drops = Array(Math.floor(columns)).fill(1);
+            
+            function drawMatrix() {
+                ctx.fillStyle = 'rgba(5, 5, 5, 0.08)'; 
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#10b981'; 
+                ctx.font = fontSize + 'px monospace';
+                
+                for (let i = 0; i < drops.length; i++) {
+                    const text = chars.charAt(Math.floor(Math.random() * chars.length));
+                    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                    if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+                    drops[i]++;
+                }
+                requestAnimationFrame(drawMatrix);
+            }
+            drawMatrix();
+        };
+    </script>
+</body>
+</html>
