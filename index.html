@@ -7,7 +7,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
-        /* GIỮ NGUYÊN CSS CỦA BẠN - ĐÃ TỐI ƯU CHO GIAO DIỆN */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
         body { background-color: #050505; color: #333; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow-y: auto; padding: 40px 20px; }
         #matrixCanvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; opacity: 0.8; pointer-events: none; }
@@ -20,9 +19,11 @@
         .hero-banner { background: linear-gradient(135deg, #1a237e, #3498db 100%); color: white; padding: 40px; border-radius: 12px; margin-bottom: 20px; }
         .form-group { margin-bottom: 25px; text-align: left; }
         .form-input { width: 100%; padding: 14px 16px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 15px; }
-        .btn { padding: 14px 28px; border: none; border-radius: 12px; cursor: pointer; font-weight: 600; width: 100%; display: inline-flex; justify-content: center; gap: 8px; }
+        .btn { padding: 14px 28px; border: none; border-radius: 12px; cursor: pointer; font-weight: 600; width: 100%; display: inline-flex; justify-content: center; gap: 8px; transition: 0.3s; }
         .btn-primary { background: #2563eb; color: white; }
-        .drop-zone { border: 2px dashed #cbd5e1; border-radius: 16px; padding: 50px 20px; background: #f8fafc; cursor: pointer; margin-bottom: 25px; }
+        .btn-primary:hover { background: #1d4ed8; transform: translateY(-2px); }
+        .drop-zone { border: 2px dashed #cbd5e1; border-radius: 16px; padding: 50px 20px; background: #f8fafc; cursor: pointer; margin-bottom: 25px; transition: 0.3s; }
+        .drop-zone:hover { border-color: #2563eb; background: #f0f7ff; }
         .loader { border: 4px solid #f1f5f9; border-top: 4px solid #2563eb; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .result-box { margin-top: 25px; padding: 25px; background: #ecfdf5; border-radius: 12px; border: 1px solid #a7f3d0; text-align: left; }
@@ -65,11 +66,13 @@
         <div class="card">
             <h2 style="text-align: left;">Xin chào, <span id="displayLeader" style="color: #2563eb;"></span>!</h2>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0;">
-                <div class="card" style="padding: 20px; background: #f8fafc;" onclick="switchView('encrypt-page')">
+                <div class="card" style="padding: 20px; background: #f8fafc; cursor: pointer;" onclick="switchView('encrypt-page')">
                     <h3>🔒 Mã Hóa</h3>
+                    <p style="font-size: 12px; color: #666;">Bảo mật tài liệu mới</p>
                 </div>
-                <div class="card" style="padding: 20px; background: #f8fafc;" onclick="alert('Chức năng đang phát triển!')">
+                <div class="card" style="padding: 20px; background: #f8fafc; cursor: pointer;" onclick="alert('Chức năng đang phát triển!')">
                     <h3>🔓 Giải Mã</h3>
+                    <p style="font-size: 12px; color: #666;">Khôi phục từ mảnh khóa</p>
                 </div>
             </div>
         </div>
@@ -77,8 +80,10 @@
 
     <section id="encrypt-page" class="view-section">
         <div class="card">
-            <button class="btn" style="width: auto; background: #eee;" onclick="switchView('dashboard-page')">⬅ Quay lại</button>
-            <h2 style="margin: 20px 0;">Tải Lên File Cần Bảo Mật</h2>
+            <div style="text-align: left; margin-bottom: 10px;">
+                <button class="btn" style="width: auto; background: #eee; padding: 8px 15px;" onclick="switchView('dashboard-page')">⬅ Quay lại</button>
+            </div>
+            <h2 style="margin-bottom: 20px;">Tải Lên File Cần Bảo Mật</h2>
             
             <div class="drop-zone" id="encDropZone">
                 <span style="font-size: 40px;">📁</span>
@@ -88,7 +93,10 @@
 
             <button class="btn btn-primary" id="btnEncrypt" onclick="processEncryption()">Bắt Đầu Mã Hóa</button>
             
-            <div id="loadingEnc" class="hidden"><div class="loader"></div><p>Đang xử lý dữ liệu trên Server...</p></div>
+            <div id="loadingEnc" class="hidden">
+                <div class="loader"></div>
+                <p>Đang xử lý dữ liệu trên Server Render...<br><small>(Lưu ý: Có thể mất 30s nếu server đang ngủ)</small></p>
+            </div>
             
             <div id="encryptResult" class="hidden result-box"></div>
         </div>
@@ -96,8 +104,8 @@
 
     <script>
         // === CẤU HÌNH KẾT NỐI BACKEND ===
-        const SERVER_URL = "https://webnckh.onrender.com";
-
+        const API_BASE_URL = "https://webnckh.onrender.com";
+        
         function switchView(viewId) {
             document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
             document.getElementById(viewId).classList.add('active');
@@ -115,17 +123,23 @@
         // Xử lý chọn file
         const dropZone = document.getElementById('encDropZone');
         const fileInput = document.getElementById('encFileInput');
+        
         dropZone.onclick = () => fileInput.click();
+        
         fileInput.onchange = () => {
-            if(fileInput.files[0]) document.getElementById('encFileName').innerText = "Đã chọn: " + fileInput.files[0].name;
+            if(fileInput.files[0]) {
+                document.getElementById('encFileName').innerText = "Đã chọn: " + fileInput.files[0].name;
+                document.getElementById('encFileName').style.color = "#2563eb";
+                document.getElementById('encFileName').style.fontWeight = "bold";
+            }
         };
 
         // HÀM GỬI DỮ LIỆU LÊN SERVER RENDER
         async function processEncryption() {
             const file = fileInput.files[0];
-            if(!file) return alert("Vui lòng chọn file!");
+            if(!file) return alert("Vui lòng chọn file trước!");
 
-            // Hiện loading
+            // Trạng thái UI
             document.getElementById('loadingEnc').classList.remove('hidden');
             document.getElementById('btnEncrypt').classList.add('hidden');
             document.getElementById('encryptResult').classList.add('hidden');
@@ -134,37 +148,35 @@
             formData.append("file", file);
             formData.append("n", config.n);
             formData.append("k", config.k);
-            formData.append("rsa_pass", "admin123"); // Password mặc định khớp với BE
+            formData.append("rsa_pass", "admin123"); 
 
             try {
-                // Gọi API tới Render
-                const response = await fetch(`${SERVER_URL}/api/encrypt`, {
+                // SỬA LỖI: Sử dụng API_BASE_URL thay vì SERVER_URL bị thiếu
+                const response = await fetch(`${API_BASE_URL}/api/encrypt`, {
                     method: "POST",
                     body: formData
                 });
 
                 const data = await response.json();
 
-                if (data.status === "success") {
-                    document.getElementById('loadingEnc').classList.add('hidden');
+                if (response.ok && data.status === "success") {
                     const resultBox = document.getElementById('encryptResult');
                     resultBox.classList.remove('hidden');
 
-                    // Hiển thị các mảnh khóa trả về từ BE
                     resultBox.innerHTML = `
-                        <h3 style="color: #10b981;">✅ Mã hóa thành công!</h3>
-                        <p>Dưới đây là <b>${config.n} mảnh khóa</b> bí mật. Hãy gửi cho các thành viên:</p>
-                        <div style="background: white; padding: 10px; border-radius: 8px; font-family: monospace; font-size: 11px; max-height: 150px; overflow-y: auto; margin: 10px 0;">
-                            ${data.shares.map((s, i) => `<div><b>Mảnh ${i+1}:</b> ${s}</div><hr style="opacity:0.2">`).join('')}
+                        <h3 style="color: #059669; margin-bottom: 10px;">✅ Mã hóa thành công!</h3>
+                        <p style="font-size: 14px; margin-bottom: 10px;">Đã chia bí mật thành <b>${config.n} mảnh</b>. Cần ít nhất <b>${config.k} mảnh</b> để giải mã.</p>
+                        <div style="background: white; padding: 15px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 11px; max-height: 200px; overflow-y: auto; border: 1px solid #d1fae5; margin-bottom: 15px;">
+                            ${data.shares.map((s, i) => `<div style="margin-bottom: 5px;"><strong>Mảnh ${i+1}:</strong><br><span style="color: #059669; word-break: break-all;">${s}</span></div><hr style="opacity:0.1; margin: 5px 0;">`).join('')}
                         </div>
                         <a href="${data.download_url}" target="_blank" class="btn btn-primary" style="background: #10b981; text-decoration: none;">📥 Tải File Đã Mã Hóa (.enc)</a>
                     `;
                 } else {
-                    alert("Lỗi server: " + data.message);
+                    alert("Lỗi từ server: " + (data.message || "Không rõ nguyên nhân"));
                 }
             } catch (error) {
-                console.error(error);
-                alert("Không thể kết nối tới Server Render. Hãy kiểm tra xem Backend đã 'Wake up' chưa!");
+                console.error("Fetch Error:", error);
+                alert("Không thể kết nối tới Server. Có thể server Render đang khởi động lại (mất ~30s). Vui lòng thử lại sau giây lát!");
             } finally {
                 document.getElementById('loadingEnc').classList.add('hidden');
                 document.getElementById('btnEncrypt').classList.remove('hidden');
