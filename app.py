@@ -10,16 +10,17 @@ from cryptography.hazmat.backends import default_backend
 
 # --- Khởi tạo Flask App ---
 app = Flask(__name__)
-CORS(app)  # Cho phép Frontend truy cập API
+CORS(app)  # Cho phép Frontend từ Netlify truy cập vào API
 
-# Tạo thư mục uploads nếu chưa có
-UPLOAD_FOLDER = "uploads"
+# --- Cấu hình đường dẫn thư mục uploads chuẩn ---
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # --- 1. Hàm tạo/lấy khóa RSA ---
 def get_or_create_rsa_keys(password: str):
-    private_path = "private_key.pem"
-    public_path = "public_key.pem"
+    private_path = os.path.join(BASE_DIR, "private_key.pem")
+    public_path = os.path.join(BASE_DIR, "public_key.pem")
 
     if not os.path.exists(private_path):
         private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
@@ -71,36 +72,43 @@ def api_encrypt():
     k = int(request.form.get('k', 3))
 
     if uploaded_file.filename != '':
-        file_path = os.path.join(UPLOAD_FOLDER, uploaded_file.filename)
+        file_name = uploaded_file.filename
+        file_path = os.path.join(UPLOAD_FOLDER, file_name)
         uploaded_file.save(file_path)
 
         # Xử lý mã hóa
-        priv_key, pub_key = get_or_create_rsa_keys(rsa_pass)
-        raw_aes_key, enc_path = encrypt_file(file_path)
-        
-        session_salt = secrets.token_hex(4)
-        combined_secret = raw_aes_key.hex() + ":" + session_salt
+        try:
+            priv_key, pub_key = get_or_create_rsa_keys(rsa_pass)
+            raw_aes_key, enc_path = encrypt_file(file_path)
+            
+            session_salt = secrets.token_hex(4)
+            combined_secret = raw_aes_key.hex() + ":" + session_salt
 
-        # Mã hóa AES Key bằng RSA
-        encrypted_session_secret = pub_key.encrypt(
-            combined_secret.encode(),
-            padding.OAEP(
-                mgf=padding.MGF1(algorithm=hashes.SHA256()), 
-                algorithm=hashes.SHA256(), 
-                label=None
+            # Mã hóa AES Key bằng RSA
+            encrypted_session_secret = pub_key.encrypt(
+                combined_secret.encode(),
+                padding.OAEP(
+                    mgf=padding.MGF1(algorithm=hashes.SHA256()), 
+                    algorithm=hashes.SHA256(), 
+                    label=None
+                )
             )
-        )
 
-        # Chia sẻ bí mật (Secret Sharing)
-        shares = PlaintextToHexSecretSharer.split_secret(encrypted_session_secret.hex(), k, n)
+            # Chia sẻ bí mật (Secret Sharing)
+            shares = PlaintextToHexSecretSharer.split_secret(encrypted_session_secret.hex(), k, n)
 
-        return jsonify({
-            "status": "success",
-            "filename": os.path.basename(enc_path),
-            "session_salt": session_salt,
-            "shares": shares,
-            "download_url": f"https://webnckh.onrender.com/download/{os.path.basename(enc_path)}"
-        })
+            # Tự động tạo link download dựa trên server hiện tại
+            download_url = f"{request.host_url}download/{os.path.basename(enc_path)}"
+
+            return jsonify({
+                "status": "success",
+                "filename": os.path.basename(enc_path),
+                "session_salt": session_salt,
+                "shares": shares,
+                "download_url": download_url
+            })
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
     
     return jsonify({"status": "error", "message": "Tên file trống"}), 400
 
@@ -114,4 +122,6 @@ def download_file(filename):
 
 # --- Khởi chạy Server ---
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
+    # Render yêu cầu dùng biến môi trường PORT
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
