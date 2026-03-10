@@ -114,6 +114,4 @@ def download_file(filename):
 
 # --- Khởi chạy Server ---
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    # Chạy debug=True để tự động reload khi sửa code
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
