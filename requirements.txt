@@ -1,5 +1,5 @@
 Flask==3.0.0
 Flask-Cors==4.0.0
 cryptography==41.0.4
-secretsharing-fixed==0.0.3  <-- Dùng bản fixed này thay cho bản cũ
+secretsharing-fixed==0.0.3  
 werkzeug==3.0.1
