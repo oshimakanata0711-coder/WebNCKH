@@ -6,7 +6,10 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.backends import default_backend
+from flask_cors import CORS # Cài: pip install flask-cors
 
+app = Flask(__name__)
+CORS(app) # Dòng này cho phép mọi tên miền (như Netlify) gọi đến Backend
 app = Flask(__name__)
 CORS(app) # BẬT CORS ĐỂ KẾT NỐI VỚI INDEX.HTML
 
