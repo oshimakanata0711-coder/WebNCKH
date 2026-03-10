@@ -399,7 +399,7 @@
 
             try {
                 // 2. Gửi sang Python (Cổng 5000 của Flask)
-                const response = await fetch("http://127.0.0.1:5000/api/encrypt", {
+                const response = await fetch("https://webnckh.onrender.com", {
                     method: "POST",
                     body: formData
                 });
