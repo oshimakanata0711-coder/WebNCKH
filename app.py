@@ -99,7 +99,7 @@ def api_encrypt():
             "filename": os.path.basename(enc_path),
             "session_salt": session_salt,
             "shares": shares,
-            "download_url": f"{request.host_url}download/{os.path.basename(enc_path)}"
+            "download_url": f"https://{request.host}/download/{os.path.basename(enc_path)}"
         })
     
     return jsonify({"status": "error", "message": "Tên file trống"}), 400
